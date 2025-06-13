@@ -177,3 +177,4 @@ if uploaded_file is not None:
 else:
     st.info("Envie um arquivo .csv gerado do Colab para começar.")
 
+

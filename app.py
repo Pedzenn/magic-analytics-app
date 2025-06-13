@@ -14,7 +14,20 @@ if uploaded_file is not None:
     st.dataframe(df)
 
     # Filtro para cartas não-terrenos
-    base_sem_terrenos = df[df['Tipo Terreno?'] == 'Não']
+    base_sem_terrenos = df[df['Tipo Terreno?'] == 'Não'].copy()  # .copy() para evitar warning
+
+    # Cria a coluna 'Tier' automaticamente com base na Pontuação Média da Carta
+    def get_tier(p):
+        if p >= 7:
+            return 'Tier S'
+        elif p >= 5:
+            return 'Tier A'
+        elif p >= 3:
+            return 'Tier B'
+        else:
+            return 'Tier C'
+
+    base_sem_terrenos['Tier'] = base_sem_terrenos['Pontuação Média da Carta'].apply(get_tier)
 
     tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11 = st.tabs([
         "Tabela Geral",
@@ -43,7 +56,6 @@ if uploaded_file is not None:
 
     with tab3:
         st.subheader("Distribuição das Cartas por Tier (Barras e Pizza)")
-        # Considere que a coluna "Tier" já foi criada no seu notebook
         tier_counts = base_sem_terrenos['Tier'].value_counts().reindex(['Tier S','Tier A','Tier B','Tier C'], fill_value=0)
         fig_tier = px.bar(tier_counts, x=tier_counts.index, y=tier_counts.values, labels={"x": "Tier", "y": "Quantidade"})
         st.plotly_chart(fig_tier)
@@ -113,7 +125,6 @@ if uploaded_file is not None:
 
     with tab11:
         st.subheader("Distribuição da Pontuação Média dos Decks por Quartil")
-        # Aqui espera-se que exista uma coluna 'Quartil' já atribuída em sua base (igual ao seu notebook)
         if "Quartil" in df.columns:
             deck_scores = df[df["Tipo Terreno?"] == "Não"]
             fig_quartil, axq = plt.subplots(figsize=(10,6))
@@ -125,4 +136,3 @@ if uploaded_file is not None:
 
 else:
     st.info("Envie um arquivo .csv gerado do Colab para começar.")
-

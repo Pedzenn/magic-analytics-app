@@ -13,6 +13,32 @@ if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
     st.dataframe(df)
 
+    # ========== AJUSTE DEFINITIVO DO TIPO PRINCIPAL DE CARTA ==========
+    def tipo_principal_magic(tipo):
+        if pd.isna(tipo):
+            return "Outro"
+        tipo = tipo.lower()
+        if "planeswalker" in tipo:
+            return "Planeswalker"
+        elif "creature" in tipo:
+            return "Criatura"
+        elif tipo.startswith("artifact"):
+            return "Artefato"
+        elif "artifact" in tipo:
+            return "Artefato"
+        elif "enchantment" in tipo:
+            return "Encantamento"
+        elif "instant" in tipo:
+            return "Instantâneo"
+        elif "sorcery" in tipo or "feitiço" in tipo:
+            return "Feitiço"
+        elif "land" in tipo or "terreno" in tipo:
+            return "Terreno"
+        else:
+            return "Outro"
+
+    df['Tipo Principal'] = df['Tipo'].apply(tipo_principal_magic)
+
     # Filtro para cartas não-terrenos
     base_sem_terrenos = df[df['Tipo Terreno?'] == 'Não'].copy()
 
@@ -42,7 +68,8 @@ if uploaded_file is not None:
         "Eficiência",
         "Quartis por Deck",
         "Top 20 Pontuação Total",
-        "Composição de Tipos por Deck"
+        "Composição de Tipos por Deck",
+        "Deck Perfeito"
     ])
 
     with tab1:
@@ -155,26 +182,54 @@ if uploaded_file is not None:
 
     with tab13:
         st.subheader("Composição Percentual dos Tipos de Carta por Deck")
-        # Calcula o percentual de cada tipo por deck
         tipo_deck = (
-            df.groupby(['Nome Completo', 'Tipo'])['Quantidade'].sum()
+            df.groupby(['Nome Completo', 'Tipo Principal'])['Quantidade'].sum()
             .reset_index()
         )
         total_deck = tipo_deck.groupby('Nome Completo')['Quantidade'].sum().reset_index().rename(columns={'Quantidade':'Total Cartas'})
         tipo_deck = pd.merge(tipo_deck, total_deck, on='Nome Completo')
         tipo_deck['Percentual'] = 100 * tipo_deck['Quantidade'] / tipo_deck['Total Cartas']
-        # Exibe um deck por vez (filtro)
         jogadores = tipo_deck['Nome Completo'].unique().tolist()
         jogador_selecionado = st.selectbox('Selecione o deck (Nome do Jogador)', jogadores)
         filtro = tipo_deck[tipo_deck['Nome Completo'] == jogador_selecionado]
-        fig_tipo = px.bar(filtro, x='Tipo', y='Percentual',
+        fig_tipo = px.bar(filtro, x='Tipo Principal', y='Percentual',
                           text='Percentual', title=f'Composição Percentual de Tipos — {jogador_selecionado}',
-                          labels={'Percentual': '% no Deck', 'Tipo': 'Tipo de Carta'})
+                          labels={'Percentual': '% no Deck', 'Tipo Principal': 'Tipo de Carta'})
         fig_tipo.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
         fig_tipo.update_layout(yaxis_range=[0, 100])
         st.plotly_chart(fig_tipo)
 
+    # Deck Perfeito
+    with tab14:
+        st.subheader("Deck Perfeito — Composição Recomendada de Tipos de Carta")
+        composicao_perfeita = {
+            'Criatura': 40,
+            'Terreno': 36,
+            'Artefato': 8,
+            'Encantamento': 5,
+            'Feitiço': 5,
+            'Instantâneo': 3,
+            'Planeswalker': 2
+        }
+        perfeicao_df = pd.DataFrame({
+            "Tipo Principal": list(composicao_perfeita.keys()),
+            "Quantidade": list(composicao_perfeita.values())
+        })
+        fig_perfeito = px.pie(
+            perfeicao_df,
+            values="Quantidade",
+            names="Tipo Principal",
+            title="Composição do Deck Perfeito (Exemplo Sugerido para 99 cartas)",
+            hole=0.3
+        )
+        st.plotly_chart(fig_perfeito)
+        fig_bar_perfeito = px.bar(
+            perfeicao_df,
+            x="Tipo Principal", y="Quantidade",
+            title="Composição do Deck Perfeito (Barras)"
+        )
+        st.plotly_chart(fig_bar_perfeito)
+
 else:
     st.info("Envie um arquivo .csv gerado do Colab para começar.")
-
 

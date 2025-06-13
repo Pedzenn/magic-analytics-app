@@ -57,9 +57,7 @@ if uploaded_file is not None:
         "Top 20 Pontuação Total",
         "Composição de Tipos por Deck",
         "Deck Perfeito",
-        "Composição Média Campeonato",
-        "Composição Média Todos Decks",
-        "Composição Média Top 10 Decks"
+        "Composição Média Campeonato"
     ])
 
     with tab1:
@@ -241,61 +239,6 @@ if uploaded_file is not None:
             title="Composição Média dos Decks do Campeonato"
         )
         st.plotly_chart(fig_pie_media)
-
-    with tab16:
-        st.subheader("Composição Média de Todos os Decks (por Tipo Principal)")
-        tipos_todos = (
-            df.groupby(['Nome Completo', 'Tipo Principal'])['Quantidade']
-            .sum()
-            .reset_index()
-        )
-        media_todos = tipos_todos.groupby('Tipo Principal')['Quantidade'].mean().reset_index()
-        media_todos = media_todos.sort_values('Quantidade', ascending=False)
-        fig_todos = px.bar(
-            media_todos,
-            x='Tipo Principal', y='Quantidade',
-            title="Média de Cada Tipo de Carta (Principal) — Todos os Decks"
-        )
-        st.plotly_chart(fig_todos)
-        fig_pie_todos = px.pie(
-            media_todos,
-            values="Quantidade",
-            names="Tipo Principal",
-            title="Composição Média — Todos os Decks"
-        )
-        st.plotly_chart(fig_pie_todos)
-
-    with tab17:
-        st.subheader("Composição Média dos 10 Decks com Maior Pontuação Média (por Tipo Principal)")
-        pontuacao_decks = (
-            df[df['Tipo Terreno?'] == 'Não']
-            .groupby('Nome Completo')['Pontuação Média da Carta']
-            .mean()
-            .reset_index()
-        )
-        top10_decks = pontuacao_decks.sort_values('Pontuação Média da Carta', ascending=False).head(10)
-        nomes_top10 = top10_decks['Nome Completo'].tolist()
-        tipos_top10 = (
-            df[df['Nome Completo'].isin(nomes_top10)]
-            .groupby(['Nome Completo', 'Tipo Principal'])['Quantidade']
-            .sum()
-            .reset_index()
-        )
-        media_top10 = tipos_top10.groupby('Tipo Principal')['Quantidade'].mean().reset_index()
-        media_top10 = media_top10.sort_values('Quantidade', ascending=False)
-        fig_top10 = px.bar(
-            media_top10,
-            x='Tipo Principal', y='Quantidade',
-            title="Média de Cada Tipo de Carta (Principal) — Top 10 Decks"
-        )
-        st.plotly_chart(fig_top10)
-        fig_pie_top10 = px.pie(
-            media_top10,
-            values="Quantidade",
-            names="Tipo Principal",
-            title="Composição Média — Top 10 Decks"
-        )
-        st.plotly_chart(fig_pie_top10)
 
 else:
     st.info("Envie um arquivo .csv gerado do Colab para começar.")

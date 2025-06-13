@@ -14,7 +14,7 @@ if uploaded_file is not None:
     st.dataframe(df)
 
     # Filtro para cartas não-terrenos
-    base_sem_terrenos = df[df['Tipo Terreno?'] == 'Não'].copy()  # .copy() para evitar warning
+    base_sem_terrenos = df[df['Tipo Terreno?'] == 'Não'].copy()
 
     # Cria a coluna 'Tier' automaticamente com base na Pontuação Média da Carta
     def get_tier(p):
@@ -29,7 +29,7 @@ if uploaded_file is not None:
 
     base_sem_terrenos['Tier'] = base_sem_terrenos['Pontuação Média da Carta'].apply(get_tier)
 
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12 = st.tabs([
         "Tabela Geral",
         "Identidade de Cor",
         "Tier das Cartas",
@@ -40,7 +40,8 @@ if uploaded_file is not None:
         "Pontuação Média por Estirpe",
         "CMC Médio por Estirpe",
         "Eficiência",
-        "Quartis por Deck"
+        "Quartis por Deck",
+        "Top 20 Pontuação Total"
     ])
 
     with tab1:
@@ -61,7 +62,6 @@ if uploaded_file is not None:
         st.plotly_chart(fig_tier)
         fig_pie = px.pie(values=tier_counts.values, names=tier_counts.index, title="Proporção de Cartas por Tier")
         st.plotly_chart(fig_pie)
-        # Boxplot por Tier
         st.write("Resumo Estatístico da Pontuação Média por Tier:")
         fig_box, ax = plt.subplots(figsize=(8,5))
         sns.boxplot(data=base_sem_terrenos, x='Tier', y='Pontuação Média da Carta', order=['Tier S','Tier A','Tier B','Tier C'], palette='Set2', ax=ax)
@@ -134,5 +134,13 @@ if uploaded_file is not None:
         else:
             st.info("A coluna 'Quartil' não foi encontrada na base. Calcule os quartis antes de enviar o arquivo.")
 
+    with tab12:
+        st.subheader("Top 20 Cartas por Pontuação Total")
+        top_total = base_sem_terrenos.groupby('Nome da Carta')['Pontuação Total da Carta'].sum().reset_index()
+        top_total = top_total.sort_values('Pontuação Total da Carta', ascending=False).head(20)
+        fig_top_total = px.bar(top_total, y='Nome da Carta', x='Pontuação Total da Carta', orientation='h')
+        st.plotly_chart(fig_top_total)
+
 else:
     st.info("Envie um arquivo .csv gerado do Colab para começar.")
+

@@ -3,7 +3,6 @@ import pandas as pd
 import plotly.express as px
 import matplotlib.pyplot as plt
 import seaborn as sns
-import re
 
 st.set_page_config(page_title="Magic Analytics", layout="wide")
 st.title("Magic: The Gathering - Dashboard Analítico de Cartas")
@@ -13,18 +12,6 @@ uploaded_file = st.file_uploader("Envie sua base (.csv) exportada do Colab", typ
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
     st.dataframe(df)
-
-    # ==== NOVO: Coluna 'Tipo Principal' simplificada ====
-    def extrai_tipo_principal(tipo):
-        if pd.isna(tipo):
-            return "Outro"
-        tipo = tipo.lower()
-        for t in ['criatura', 'terreno', 'artefato', 'encantamento', 'feitiço', 'instantâneo', 'planeswalker']:
-            if t in tipo:
-                return t.capitalize()
-        return "Outro"
-
-    df['Tipo Principal'] = df['Tipo'].apply(extrai_tipo_principal)
 
     # Filtro para cartas não-terrenos
     base_sem_terrenos = df[df['Tipo Terreno?'] == 'Não'].copy()
@@ -55,8 +42,7 @@ if uploaded_file is not None:
         "Eficiência",
         "Quartis por Deck",
         "Top 20 Pontuação Total",
-        "Composição de Tipos por Deck",
-        "Deck Perfeito"
+        "Composição de Tipos por Deck"
     ])
 
     with tab1:
@@ -169,52 +155,24 @@ if uploaded_file is not None:
 
     with tab13:
         st.subheader("Composição Percentual dos Tipos de Carta por Deck")
+        # Calcula o percentual de cada tipo por deck
         tipo_deck = (
-            df.groupby(['Nome Completo', 'Tipo Principal'])['Quantidade'].sum()
+            df.groupby(['Nome Completo', 'Tipo'])['Quantidade'].sum()
             .reset_index()
         )
         total_deck = tipo_deck.groupby('Nome Completo')['Quantidade'].sum().reset_index().rename(columns={'Quantidade':'Total Cartas'})
         tipo_deck = pd.merge(tipo_deck, total_deck, on='Nome Completo')
         tipo_deck['Percentual'] = 100 * tipo_deck['Quantidade'] / tipo_deck['Total Cartas']
+        # Exibe um deck por vez (filtro)
         jogadores = tipo_deck['Nome Completo'].unique().tolist()
         jogador_selecionado = st.selectbox('Selecione o deck (Nome do Jogador)', jogadores)
         filtro = tipo_deck[tipo_deck['Nome Completo'] == jogador_selecionado]
-        fig_tipo = px.bar(filtro, x='Tipo Principal', y='Percentual',
+        fig_tipo = px.bar(filtro, x='Tipo', y='Percentual',
                           text='Percentual', title=f'Composição Percentual de Tipos — {jogador_selecionado}',
-                          labels={'Percentual': '% no Deck', 'Tipo Principal': 'Tipo de Carta'})
+                          labels={'Percentual': '% no Deck', 'Tipo': 'Tipo de Carta'})
         fig_tipo.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
         fig_tipo.update_layout(yaxis_range=[0, 100])
         st.plotly_chart(fig_tipo)
-
-    with tab14:
-        st.subheader("Deck Perfeito — Composição Recomendada de Tipos de Carta")
-        composicao_perfeita = {
-            'Criatura': 40,
-            'Terreno': 36,
-            'Artefato': 8,
-            'Encantamento': 5,
-            'Feitiço': 5,
-            'Instantâneo': 3,
-            'Planeswalker': 2
-        }
-        perfeicao_df = pd.DataFrame({
-            "Tipo Principal": list(composicao_perfeita.keys()),
-            "Quantidade": list(composicao_perfeita.values())
-        })
-        fig_perfeito = px.pie(
-            perfeicao_df,
-            values="Quantidade",
-            names="Tipo Principal",
-            title="Composição do Deck Perfeito (Exemplo Sugerido para 99 cartas)",
-            hole=0.3
-        )
-        st.plotly_chart(fig_perfeito)
-        fig_bar_perfeito = px.bar(
-            perfeicao_df,
-            x="Tipo Principal", y="Quantidade",
-            title="Composição do Deck Perfeito (Barras)"
-        )
-        st.plotly_chart(fig_bar_perfeito)
 
 else:
     st.info("Envie um arquivo .csv gerado do Colab para começar.")

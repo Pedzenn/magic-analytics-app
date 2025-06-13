@@ -29,7 +29,7 @@ if uploaded_file is not None:
 
     base_sem_terrenos['Tier'] = base_sem_terrenos['Pontuação Média da Carta'].apply(get_tier)
 
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13, tab14, tab15, tab16, tab17 = st.tabs([
         "Tabela Geral",
         "Identidade de Cor",
         "Tier das Cartas",
@@ -42,7 +42,11 @@ if uploaded_file is not None:
         "Eficiência",
         "Quartis por Deck",
         "Top 20 Pontuação Total",
-        "Composição de Tipos por Deck"
+        "Composição de Tipos por Deck",
+        "Deck Perfeito",
+        "Composição Média Campeonato",
+        "Composição Média Todos Decks",
+        "Composição Média Top 10 Decks"
     ])
 
     with tab1:
@@ -155,7 +159,6 @@ if uploaded_file is not None:
 
     with tab13:
         st.subheader("Composição Percentual dos Tipos de Carta por Deck")
-        # Calcula o percentual de cada tipo por deck
         tipo_deck = (
             df.groupby(['Nome Completo', 'Tipo'])['Quantidade'].sum()
             .reset_index()
@@ -163,7 +166,6 @@ if uploaded_file is not None:
         total_deck = tipo_deck.groupby('Nome Completo')['Quantidade'].sum().reset_index().rename(columns={'Quantidade':'Total Cartas'})
         tipo_deck = pd.merge(tipo_deck, total_deck, on='Nome Completo')
         tipo_deck['Percentual'] = 100 * tipo_deck['Quantidade'] / tipo_deck['Total Cartas']
-        # Exibe um deck por vez (filtro)
         jogadores = tipo_deck['Nome Completo'].unique().tolist()
         jogador_selecionado = st.selectbox('Selecione o deck (Nome do Jogador)', jogadores)
         filtro = tipo_deck[tipo_deck['Nome Completo'] == jogador_selecionado]
@@ -173,6 +175,114 @@ if uploaded_file is not None:
         fig_tipo.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
         fig_tipo.update_layout(yaxis_range=[0, 100])
         st.plotly_chart(fig_tipo)
+
+    with tab14:
+        st.subheader("Deck Perfeito — Composição Recomendada de Tipos de Carta")
+        composicao_perfeita = {
+            'Criatura': 40,
+            'Terreno': 36,
+            'Artefato': 8,
+            'Encantamento': 5,
+            'Feitiço': 5,
+            'Instantâneo': 3,
+            'Planeswalker': 2
+        }
+        perfeicao_df = pd.DataFrame({
+            "Tipo": list(composicao_perfeita.keys()),
+            "Quantidade": list(composicao_perfeita.values())
+        })
+        fig_perfeito = px.pie(
+            perfeicao_df,
+            values="Quantidade",
+            names="Tipo",
+            title="Composição do Deck Perfeito (Exemplo Sugerido para 99 cartas)",
+            hole=0.3
+        )
+        st.plotly_chart(fig_perfeito)
+        fig_bar_perfeito = px.bar(
+            perfeicao_df,
+            x="Tipo", y="Quantidade",
+            title="Composição do Deck Perfeito (Barras)"
+        )
+        st.plotly_chart(fig_bar_perfeito)
+
+    with tab15:
+        st.subheader("Composição Média dos Decks do Campeonato")
+        tipos_campeonato = (
+            df.groupby(['Nome Completo', 'Tipo'])['Quantidade']
+            .sum()
+            .reset_index()
+        )
+        media_tipo = tipos_campeonato.groupby('Tipo')['Quantidade'].mean().reset_index()
+        media_tipo = media_tipo.sort_values('Quantidade', ascending=False)
+        fig_media_tipo = px.bar(
+            media_tipo,
+            x='Tipo', y='Quantidade',
+            title="Média de Cada Tipo de Carta nos Decks do Campeonato"
+        )
+        st.plotly_chart(fig_media_tipo)
+        fig_pie_media = px.pie(
+            media_tipo,
+            values="Quantidade",
+            names="Tipo",
+            title="Composição Média dos Decks do Campeonato"
+        )
+        st.plotly_chart(fig_pie_media)
+
+    with tab16:
+        st.subheader("Composição Média de Todos os Decks (por Tipo de Carta)")
+        tipos_todos = (
+            df.groupby(['Nome Completo', 'Tipo'])['Quantidade']
+            .sum()
+            .reset_index()
+        )
+        media_todos = tipos_todos.groupby('Tipo')['Quantidade'].mean().reset_index()
+        media_todos = media_todos.sort_values('Quantidade', ascending=False)
+        fig_todos = px.bar(
+            media_todos,
+            x='Tipo', y='Quantidade',
+            title="Média de Cada Tipo de Carta — Todos os Decks"
+        )
+        st.plotly_chart(fig_todos)
+        fig_pie_todos = px.pie(
+            media_todos,
+            values="Quantidade",
+            names="Tipo",
+            title="Composição Média — Todos os Decks"
+        )
+        st.plotly_chart(fig_pie_todos)
+
+    with tab17:
+        st.subheader("Composição Média dos 10 Decks com Maior Pontuação Média (por Tipo de Carta)")
+        pontuacao_decks = (
+            df[df['Tipo Terreno?'] == 'Não']
+            .groupby('Nome Completo')['Pontuação Média da Carta']
+            .mean()
+            .reset_index()
+        )
+        top10_decks = pontuacao_decks.sort_values('Pontuação Média da Carta', ascending=False).head(10)
+        nomes_top10 = top10_decks['Nome Completo'].tolist()
+        tipos_top10 = (
+            df[df['Nome Completo'].isin(nomes_top10)]
+            .groupby(['Nome Completo', 'Tipo'])['Quantidade']
+            .sum()
+            .reset_index()
+        )
+        media_top10 = tipos_top10.groupby('Tipo')['Quantidade'].mean().reset_index()
+        media_top10 = media_top10.sort_values('Quantidade', ascending=False)
+        fig_top10 = px.bar(
+            media_top10,
+            x='Tipo', y='Quantidade',
+            title="Média de Cada Tipo de Carta — Top 10 Decks"
+        )
+        st.plotly_chart(fig_top10)
+        fig_pie_top10 = px.pie(
+            media_top10,
+            values="Quantidade",
+            names="Tipo",
+            title="Composição Média — Top 10 Decks"
+        )
+        st.plotly_chart(fig_pie_top10)
 
 else:
     st.info("Envie um arquivo .csv gerado do Colab para começar.")

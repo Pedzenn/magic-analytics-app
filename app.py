@@ -1,109 +1,128 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import seaborn as sns
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 st.set_page_config(page_title="Magic Analytics", layout="wide")
-st.title("Magic: The Gathering - Análise de Cartas")
+st.title("Magic: The Gathering - Dashboard Analítico de Cartas")
 
-uploaded_file = st.file_uploader("Envie sua planilha de cartas (.csv)", type="csv")
+uploaded_file = st.file_uploader("Envie sua base (.csv) exportada do Colab", type="csv")
 
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
-
-    st.subheader("Tabela com filtro")
     st.dataframe(df)
 
-    # Top 20 cartas por pontuação total
-    st.subheader("Top 20 Cartas por Pontuação Total")
-    top_total = df.sort_values(by="Pontuação Total", ascending=False).head(20)
-    fig_total = px.bar(top_total, x="Nome", y="Pontuação Total", text="Pontuação Total", title="Top 20 - Pontuação Total")
-    fig_total.update_traces(textposition='outside')
-    st.plotly_chart(fig_total)
+    # Filtro para cartas não-terrenos
+    base_sem_terrenos = df[df['Tipo Terreno?'] == 'Não']
 
-    # Top 20 mais utilizadas nos decks
-    st.subheader("Top 20 Cartas Mais Utilizadas nos Decks")
-    top_usadas = df.sort_values(by="Quantidade em Deck", ascending=False).head(20)
-    fig_usadas = px.bar(top_usadas, y="Nome", x="Quantidade em Deck", orientation='h', title="Top 20 - Cartas Mais Usadas")
-    st.plotly_chart(fig_usadas)
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11 = st.tabs([
+        "Tabela Geral",
+        "Identidade de Cor",
+        "Tier das Cartas",
+        "Top 10 Mais Usadas",
+        "CMC Médio por Comandante",
+        "Top 20 Pontuação Média",
+        "CMC das + Pontuadas",
+        "Pontuação Média por Estirpe",
+        "CMC Médio por Estirpe",
+        "Eficiência",
+        "Quartis por Deck"
+    ])
 
-    # Cartas com maior pontuação média
-    st.subheader("Top 20 Cartas com Maior Pontuação Média")
-    top_media = df[df["Quantidade em Deck"] >= 3].sort_values(by="Pontuação Média", ascending=False).head(20)
-    fig_media = px.bar(top_media, y="Nome", x="Pontuação Média", orientation='h', title="Top 20 - Pontuação Média")
-    st.plotly_chart(fig_media)
+    with tab1:
+        st.subheader("Tabela Geral com Filtro")
+        st.dataframe(df)
 
-    # Distribuição da pontuação média
-    st.subheader("Distribuição da Pontuação Média (Tabela)")
-    st.dataframe(df[["Nome", "Pontuação Média"]].sort_values(by="Pontuação Média", ascending=False))
+    with tab2:
+        st.subheader("Distribuição de Cartas por Identidade de Cores (Sem Terrenos)")
+        dist_cores = base_sem_terrenos['Identidade de Cor'].value_counts().reset_index()
+        dist_cores.columns = ['Identidade de Cor', 'Quantidade']
+        fig = px.bar(dist_cores, x='Identidade de Cor', y='Quantidade')
+        st.plotly_chart(fig)
 
-    # Distribuição das cartas por tier
-    st.subheader("Distribuição das Cartas por Tier")
-    tier_counts = df["Tier"].value_counts()
-    col1, col2 = st.columns(2)
-    with col1:
-        st.bar_chart(tier_counts)
-    with col2:
-        fig_pie = px.pie(values=tier_counts.values, names=tier_counts.index, title="Distribuição por Tier")
+    with tab3:
+        st.subheader("Distribuição das Cartas por Tier (Barras e Pizza)")
+        # Considere que a coluna "Tier" já foi criada no seu notebook
+        tier_counts = base_sem_terrenos['Tier'].value_counts().reindex(['Tier S','Tier A','Tier B','Tier C'], fill_value=0)
+        fig_tier = px.bar(tier_counts, x=tier_counts.index, y=tier_counts.values, labels={"x": "Tier", "y": "Quantidade"})
+        st.plotly_chart(fig_tier)
+        fig_pie = px.pie(values=tier_counts.values, names=tier_counts.index, title="Proporção de Cartas por Tier")
         st.plotly_chart(fig_pie)
+        # Boxplot por Tier
+        st.write("Resumo Estatístico da Pontuação Média por Tier:")
+        fig_box, ax = plt.subplots(figsize=(8,5))
+        sns.boxplot(data=base_sem_terrenos, x='Tier', y='Pontuação Média da Carta', order=['Tier S','Tier A','Tier B','Tier C'], palette='Set2', ax=ax)
+        st.pyplot(fig_box)
 
-    # Quantidade de cartas por deck
-    st.subheader("Quantidade de Cartas por Deck")
-    cartas_por_deck = df.groupby("Deck")["Nome"].count().reset_index(name="Quantidade de Cartas")
-    st.dataframe(cartas_por_deck)
+    with tab4:
+        st.subheader("Top 10 Cartas Mais Utilizadas (Sem Terrenos)")
+        mais_usadas = base_sem_terrenos.groupby('Nome da Carta')['Quantidade'].sum().reset_index()
+        mais_usadas = mais_usadas.sort_values('Quantidade', ascending=False).head(10)
+        fig_mais = px.bar(mais_usadas, y='Nome da Carta', x='Quantidade', orientation='h', title="Top 10 Cartas Mais Usadas")
+        st.plotly_chart(fig_mais)
 
-    # Distribuição por identidade de cor (sem terrenos)
-    st.subheader("Distribuição por Identidade de Cor (sem Terrenos)")
-    cores = df[~df["Tipo"].str.contains("Terreno", na=False)]
-    identidade_counts = cores["Identidade"].value_counts().reset_index()
-    identidade_counts.columns = ["Identidade", "Quantidade"]
-    fig_identidade = px.bar(identidade_counts, x="Identidade", y="Quantidade", title="Distribuição por Identidade de Cor")
-    st.plotly_chart(fig_identidade)
+    with tab5:
+        st.subheader("Custo Médio de Mana por Comandante")
+        comand = df[df['Commander'] == 'Sim'][['Nome Completo', 'Nome da Carta']]
+        cmc_deck = base_sem_terrenos.groupby('Nome Completo')['cmc'].mean().reset_index()
+        resultado = pd.merge(comand, cmc_deck, on='Nome Completo')
+        resultado = resultado.rename(columns={'Nome da Carta': 'Comandante', 'cmc': 'CMC Médio'})
+        fig_cmc = px.bar(resultado, x='Comandante', y='CMC Médio', hover_data=['Nome Completo'])
+        st.plotly_chart(fig_cmc)
 
-    # Pontuação média por identidade de cor
-    st.subheader("Pontuação Média por Identidade de Cor")
-    media_cor = cores.groupby("Identidade")["Pontuação Média"].mean().reset_index()
-    fig_media_cor = px.bar(media_cor, x="Identidade", y="Pontuação Média", title="Pontuação Média por Identidade")
-    st.plotly_chart(fig_media_cor)
+    with tab6:
+        st.subheader("Top 20 Cartas com Maior Pontuação Média")
+        top_media = base_sem_terrenos.groupby('Nome da Carta')['Pontuação Média da Carta'].mean().reset_index()
+        top_media = top_media.sort_values('Pontuação Média da Carta', ascending=False).head(20)
+        fig_top_media = px.bar(top_media, y='Nome da Carta', x='Pontuação Média da Carta', orientation='h')
+        st.plotly_chart(fig_top_media)
 
-    # Proporção dos tipos de cartas por deck (gráfico de bolhas)
-    st.subheader("Proporção dos Tipos de Carta por Deck")
-    tipos_por_deck = df.groupby(["Deck", "Tipo"]).size().reset_index(name="Quantidade")
-    fig_bolhas = px.scatter(tipos_por_deck, x="Deck", y="Tipo", size="Quantidade", color="Tipo",
-                            title="Proporção de Tipos por Deck", size_max=60)
-    st.plotly_chart(fig_bolhas)
+    with tab7:
+        st.subheader("CMC das 20 Cartas com Maior Pontuação Média")
+        top_cmc = base_sem_terrenos.groupby('Nome da Carta').agg({
+            'Pontuação Média da Carta': 'mean', 'cmc': 'mean'}).reset_index()
+        top_cmc = top_cmc.sort_values('Pontuação Média da Carta', ascending=False).head(20)
+        fig_top_cmc = px.bar(top_cmc, x='cmc', y='Nome da Carta', orientation='h', color='Pontuação Média da Carta',
+                             title='CMC das 20 Cartas com Maior Pontuação Média',
+                             labels={'cmc': 'CMC Médio', 'Nome da Carta': 'Carta'})
+        st.plotly_chart(fig_top_cmc)
 
-    # CMC médio por comandante
-    st.subheader("CMC Médio por Deck")
-    cmc_comandante = df.groupby("Deck")["CMC"].mean().reset_index()
-    fig_cmc_deck = px.bar(cmc_comandante, x="Deck", y="CMC", title="CMC Médio por Deck")
-    st.plotly_chart(fig_cmc_deck)
+    with tab8:
+        st.subheader("Pontuação Média por Estirpe")
+        media_estirpe = base_sem_terrenos.groupby('ESTIRPE')['Pontuação Média da Carta'].mean().reset_index()
+        fig_estirpe = px.bar(media_estirpe, x='ESTIRPE', y='Pontuação Média da Carta')
+        st.plotly_chart(fig_estirpe)
 
-    # CMC médio das cartas com maior pontuação
-    st.subheader("CMC Médio das Cartas Mais Pontuadas")
-    top_cmc = top_total.groupby("Nome")["CMC"].mean().reset_index()
-    fig_cmc_top = px.bar(top_cmc, y="Nome", x="CMC", orientation='h', title="CMC Médio - Cartas Mais Pontuadas")
-    st.plotly_chart(fig_cmc_top)
+    with tab9:
+        st.subheader("CMC Médio por Estirpe")
+        cmc_estirpe = base_sem_terrenos.groupby('ESTIRPE')['cmc'].mean().reset_index()
+        fig_cmc_estirpe = px.bar(cmc_estirpe, x='ESTIRPE', y='cmc')
+        st.plotly_chart(fig_cmc_estirpe)
 
-    # Pontuação média por estirpe
-    st.subheader("Pontuação Média por Estirpe")
-    media_estirpe = df.groupby("Estirpe")["Pontuação Média"].mean().reset_index()
-    fig_estirpe = px.bar(media_estirpe, x="Estirpe", y="Pontuação Média", title="Pontuação Média por Estirpe")
-    st.plotly_chart(fig_estirpe)
+    with tab10:
+        st.subheader("Eficiência das Cartas: Pontuação Média vs. Quantidade de Decks")
+        eficiencia = base_sem_terrenos.copy()
+        eficiencia = eficiencia.groupby('Nome da Carta').agg({
+            'Pontuação Média da Carta':'mean',
+            'Carta Aparece em Quantos Decks':'max'
+        }).reset_index()
+        fig_ef = px.scatter(eficiencia, x='Carta Aparece em Quantos Decks', y='Pontuação Média da Carta',
+                            size='Pontuação Média da Carta', hover_name='Nome da Carta')
+        st.plotly_chart(fig_ef)
 
-    # CMC médio por estirpe
-    st.subheader("CMC Médio por Estirpe")
-    cmc_estirpe = df.groupby("Estirpe")["CMC"].mean().reset_index()
-    fig_cmc_estirpe = px.bar(cmc_estirpe, x="Estirpe", y="CMC", title="CMC Médio por Estirpe")
-    st.plotly_chart(fig_cmc_estirpe)
-
-    # Eficiência das cartas: Pontuação Média vs. Quantidade em Deck
-    st.subheader("Eficiência das Cartas (Pontuação Média x Qtd. em Deck)")
-    fig_eficiencia = px.scatter(df, x="Quantidade em Deck", y="Pontuação Média", hover_name="Nome",
-                                size="Pontuação Total", color="Tipo",
-                                title="Eficiência das Cartas")
-    st.plotly_chart(fig_eficiencia)
+    with tab11:
+        st.subheader("Distribuição da Pontuação Média dos Decks por Quartil")
+        # Aqui espera-se que exista uma coluna 'Quartil' já atribuída em sua base (igual ao seu notebook)
+        if "Quartil" in df.columns:
+            deck_scores = df[df["Tipo Terreno?"] == "Não"]
+            fig_quartil, axq = plt.subplots(figsize=(10,6))
+            sns.boxplot(data=deck_scores, x='Quartil', y='Pontuação Média da Carta',
+                        order=['Q1','Q2','Q3','Q4'], palette='viridis', ax=axq)
+            st.pyplot(fig_quartil)
+        else:
+            st.info("A coluna 'Quartil' não foi encontrada na base. Calcule os quartis antes de enviar o arquivo.")
 
 else:
-    st.info("Envie um arquivo .csv para começar.")
+    st.info("Envie um arquivo .csv gerado do Colab para começar.")
+

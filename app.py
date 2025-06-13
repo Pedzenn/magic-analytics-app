@@ -18,11 +18,11 @@ if uploaded_file is not None:
 
     # Cria a coluna 'Tier' automaticamente com base na Pontuação Média da Carta
     def get_tier(p):
-        if p >= 11.12:
+        if p >= 7:
             return 'Tier S'
-        elif p >= 8.94:
+        elif p >= 5:
             return 'Tier A'
-        elif p >= 6.88:
+        elif p >= 3:
             return 'Tier B'
         else:
             return 'Tier C'
@@ -80,6 +80,7 @@ if uploaded_file is not None:
         cmc_deck = base_sem_terrenos.groupby('Nome Completo')['cmc'].mean().reset_index()
         resultado = pd.merge(comand, cmc_deck, on='Nome Completo')
         resultado = resultado.rename(columns={'Nome da Carta': 'Comandante', 'cmc': 'CMC Médio'})
+        resultado = resultado.sort_values('CMC Médio', ascending=False)
         fig_cmc = px.bar(resultado, x='Comandante', y='CMC Médio', hover_data=['Nome Completo'])
         st.plotly_chart(fig_cmc)
 
@@ -103,12 +104,14 @@ if uploaded_file is not None:
     with tab8:
         st.subheader("Pontuação Média por Estirpe")
         media_estirpe = base_sem_terrenos.groupby('ESTIRPE')['Pontuação Média da Carta'].mean().reset_index()
+        media_estirpe = media_estirpe.sort_values('Pontuação Média da Carta', ascending=False)
         fig_estirpe = px.bar(media_estirpe, x='ESTIRPE', y='Pontuação Média da Carta')
         st.plotly_chart(fig_estirpe)
 
     with tab9:
         st.subheader("CMC Médio por Estirpe")
         cmc_estirpe = base_sem_terrenos.groupby('ESTIRPE')['cmc'].mean().reset_index()
+        cmc_estirpe = cmc_estirpe.sort_values('cmc', ascending=False)
         fig_cmc_estirpe = px.bar(cmc_estirpe, x='ESTIRPE', y='cmc')
         st.plotly_chart(fig_cmc_estirpe)
 
@@ -143,4 +146,3 @@ if uploaded_file is not None:
 
 else:
     st.info("Envie um arquivo .csv gerado do Colab para começar.")
-

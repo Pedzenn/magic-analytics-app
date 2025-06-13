@@ -18,11 +18,11 @@ if uploaded_file is not None:
 
     # Cria a coluna 'Tier' automaticamente com base na Pontuação Média da Carta
     def get_tier(p):
-        if p >= 7:
+        if p >= 11.12:
             return 'Tier S'
-        elif p >= 5:
+        elif p >= 8.94:
             return 'Tier A'
-        elif p >= 3:
+        elif p >= 6.88:
             return 'Tier B'
         else:
             return 'Tier C'

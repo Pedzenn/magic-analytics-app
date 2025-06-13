@@ -29,7 +29,7 @@ if uploaded_file is not None:
 
     base_sem_terrenos['Tier'] = base_sem_terrenos['Pontuação Média da Carta'].apply(get_tier)
 
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13 = st.tabs([
         "Tabela Geral",
         "Identidade de Cor",
         "Tier das Cartas",
@@ -41,7 +41,8 @@ if uploaded_file is not None:
         "CMC Médio por Estirpe",
         "Eficiência",
         "Quartis por Deck",
-        "Top 20 Pontuação Total"
+        "Top 20 Pontuação Total",
+        "Composição de Tipos por Deck"
     ])
 
     with tab1:
@@ -75,13 +76,21 @@ if uploaded_file is not None:
         st.plotly_chart(fig_mais)
 
     with tab5:
-        st.subheader("Custo Médio de Mana por Comandante")
+        st.subheader("Custo Médio de Mana por Comandante (Deck por Jogador)")
         comand = df[df['Commander'] == 'Sim'][['Nome Completo', 'Nome da Carta']]
         cmc_deck = base_sem_terrenos.groupby('Nome Completo')['cmc'].mean().reset_index()
         resultado = pd.merge(comand, cmc_deck, on='Nome Completo')
         resultado = resultado.rename(columns={'Nome da Carta': 'Comandante', 'cmc': 'CMC Médio'})
+        resultado['Comandante_Jogador'] = resultado['Comandante'] + " — " + resultado['Nome Completo']
         resultado = resultado.sort_values('CMC Médio', ascending=False)
-        fig_cmc = px.bar(resultado, x='Comandante', y='CMC Médio', hover_data=['Nome Completo'])
+        fig_cmc = px.bar(
+            resultado,
+            x='Comandante_Jogador',
+            y='CMC Médio',
+            hover_data=['Comandante', 'Nome Completo'],
+            title='Custo Médio de Mana por Comandante e Jogador'
+        )
+        fig_cmc.update_layout(xaxis_tickangle=45)
         st.plotly_chart(fig_cmc)
 
     with tab6:
@@ -143,6 +152,27 @@ if uploaded_file is not None:
         top_total = top_total.sort_values('Pontuação Total da Carta', ascending=False).head(20)
         fig_top_total = px.bar(top_total, y='Nome da Carta', x='Pontuação Total da Carta', orientation='h')
         st.plotly_chart(fig_top_total)
+
+    with tab13:
+        st.subheader("Composição Percentual dos Tipos de Carta por Deck")
+        # Calcula o percentual de cada tipo por deck
+        tipo_deck = (
+            df.groupby(['Nome Completo', 'Tipo'])['Quantidade'].sum()
+            .reset_index()
+        )
+        total_deck = tipo_deck.groupby('Nome Completo')['Quantidade'].sum().reset_index().rename(columns={'Quantidade':'Total Cartas'})
+        tipo_deck = pd.merge(tipo_deck, total_deck, on='Nome Completo')
+        tipo_deck['Percentual'] = 100 * tipo_deck['Quantidade'] / tipo_deck['Total Cartas']
+        # Exibe um deck por vez (filtro)
+        jogadores = tipo_deck['Nome Completo'].unique().tolist()
+        jogador_selecionado = st.selectbox('Selecione o deck (Nome do Jogador)', jogadores)
+        filtro = tipo_deck[tipo_deck['Nome Completo'] == jogador_selecionado]
+        fig_tipo = px.bar(filtro, x='Tipo', y='Percentual',
+                          text='Percentual', title=f'Composição Percentual de Tipos — {jogador_selecionado}',
+                          labels={'Percentual': '% no Deck', 'Tipo': 'Tipo de Carta'})
+        fig_tipo.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
+        fig_tipo.update_layout(yaxis_range=[0, 100])
+        st.plotly_chart(fig_tipo)
 
 else:
     st.info("Envie um arquivo .csv gerado do Colab para começar.")

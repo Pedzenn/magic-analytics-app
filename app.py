@@ -27,7 +27,7 @@ def get_tier(p):
 
 base_sem_terrenos['Tier'] = base_sem_terrenos['Pontuação Média da Carta'].apply(get_tier)
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13 = st.tabs([
     "Tabela Geral",
     "Identidade de Cor",
     "Tier das Cartas",
@@ -39,7 +39,8 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12 = st.t
     "CMC Médio por Estirpe",
     "Eficiência",
     "Quartis por Deck",
-    "Composição de Tipos por Deck"
+    "Composição de Tipos por Deck",
+    "Deck Perfeito"
 ])
 
 with tab1:
@@ -75,7 +76,6 @@ with tab4:
 
 with tab5:
     st.subheader("Custo Médio de Mana por Comandante (por Jogador)")
-    # Junta o nome do comandante e do jogador para ficar único
     comand = df[df['Commander'] == 'Sim'][['Nome Completo', 'Nome da Carta']]
     cmc_deck = base_sem_terrenos.groupby('Nome Completo')['cmc'].mean().reset_index()
     resultado = pd.merge(comand, cmc_deck, on='Nome Completo')
@@ -152,4 +152,17 @@ with tab12:
                      labels={'Percentual': '% no Deck', 'Tipo': 'Tipo de Carta'})
         fig.update_yaxes(tickformat=".0%")
         st.plotly_chart(fig)
+
+with tab13:
+    st.subheader("Deck Perfeito — Composição Recomendada de Tipos de Carta")
+    composicao_perfeita = pd.DataFrame({
+        'Tipo': ['Criatura', 'Terreno', 'Artefato', 'Encantamento', 'Feitiço', 'Instantâneo', 'Planeswalker'],
+        'Quantidade': [40, 36, 8, 5, 5, 3, 2]
+    })
+    fig_dp_pie = px.pie(composicao_perfeita, names='Tipo', values='Quantidade', hole=0.3)
+    fig_dp_bar = px.bar(composicao_perfeita, x='Tipo', y='Quantidade')
+    st.write("Composição do Deck Perfeito (Exemplo Sugerido para 99 cartas)")
+    st.plotly_chart(fig_dp_pie)
+    st.write("Composição do Deck Perfeito (Barras)")
+    st.plotly_chart(fig_dp_bar)
 
